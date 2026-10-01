@@ -1,7 +1,7 @@
 # Synthetic loopback PostgreSQL only. No production topology or later-task roles.
 services:
   postgres:
-    image: postgres:17.11-bookworm@sha256:639ab7ceb90e13123085b741fb31ef493fba25463002f6da665352e7b534b652
+    image: postgres:18.6-bookworm@sha256:3725f4e2499eef5134592b3b4ab79a543ed7f8e533b05b5b637af926630f6650
     environment:
       POSTGRES_USER: aap_bootstrap
       POSTGRES_DB: postgres
@@ -9,7 +9,7 @@ services:
     ports:
       - "127.0.0.1:55432:5432"
     volumes:
-      - aap_local_pg:/var/lib/postgresql/data
+      - aap_local_pg18:/var/lib/postgresql
       - ./local-init.sql:/docker-entrypoint-initdb.d/local-init.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U aap_bootstrap -d postgres"]
@@ -20,4 +20,4 @@ services:
     pids_limit: 128
     mem_limit: 512m
 volumes:
-  aap_local_pg:
+  aap_local_pg18:

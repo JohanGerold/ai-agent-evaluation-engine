@@ -15,7 +15,8 @@ agent engine, queue, budget ledger or operational service exists yet.
 
 ## Development and verification
 
-Use Python **3.13.15**, uv **0.12.15**, Django **5.2.17**, and real PostgreSQL **17.11**.
+Use Python **3.13.15**, uv **0.12.15**, Django **5.2.17**, and real PostgreSQL **18.x**
+(currently tested patch **18.6**). See the [authorized baseline amendment](docs/evidence/POSTGRESQL_18_AMENDMENT.md).
 Versions and all transitive hashes are recorded in `uv.lock`; `requirements.txt`
 is the hash-locked runtime export for the OCI recipe. No SQLite fallback is supported.
 Dependency installation is a preparation step; tests and builds use locked offline inputs.
@@ -31,10 +32,10 @@ uv run --offline --locked python manage.py makemigrations --check --dry-run
 uv run --offline --locked pytest -m "not postgres"
 ```
 
-For the owned portable PostgreSQL harness, supply a PostgreSQL 17 binary directory:
+For the owned PostgreSQL harness, supply a PostgreSQL 18 binary directory:
 
 ```powershell
-uv run --offline --locked python tools/run_postgres_tests.py --pg-bin .tools/postgresql-17.11/pgsql/bin
+uv run --offline --locked python tools/run_postgres_tests.py --pg-bin "C:/Program Files/PostgreSQL/18/bin"
 ```
 
 It initializes a fresh synthetic cluster under `.artifacts/`, binds only loopback on
@@ -96,7 +97,7 @@ worker entry point are in the same wheel/image. Container execution should use
 deployment containment proof remains T-036a/b, not a T-002 claim.
 
 The SHA-pinned GitHub workflow has read-only repository permission, no retained
-checkout credential or deployment secrets, real PostgreSQL 17 migration tests,
+checkout credential or deployment secrets, real PostgreSQL 18.6 migration tests,
 offline tests, build and container smoke steps. It neither provisions staging nor
 dispatches providers. A recipe's existence is not evidence that hosted CI or Docker
 ran. Results, command transcripts, AC contributions and unavailable checks are in

@@ -10,6 +10,7 @@ jobs:
       UV_NO_CACHE: "1"
       AAP_ENVIRONMENT: test
       SOURCE_DATE_EPOCH: "1790899200"
+      COMPOSE_PROJECT_NAME: aap-t002-ci
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
@@ -27,13 +28,10 @@ jobs:
       - run: uv run --offline --locked python tools/check_repository.py
       - run: uv run --offline --locked python manage.py check && uv run --offline --locked python manage.py makemigrations --check --dry-run
       - run: uv run --offline --locked pytest -m 'not postgres' --junitxml=.artifacts/unit.xml
-      - name: Real PostgreSQL 17 integration
+      - name: Real PostgreSQL 18.6 integration
         run: |
           docker compose -f infra/compose.local.yml up -d --wait
           uv run --offline --locked python tools/run_postgres_tests.py --external-port 55432
-      - name: Stop synthetic CI PostgreSQL
-        if: always()
-        run: docker compose -f infra/compose.local.yml down -v
       - name: Reproducible clean package builds
         run: |
           uv build --offline --no-build-isolation --out-dir .artifacts/build-one
@@ -43,7 +41,11 @@ jobs:
           cp .artifacts/build-one/*.whl dist/
       - run: docker build --build-arg SOURCE_REVISION="$GITHUB_SHA" --tag aap:foundation .
       - run: docker image inspect --format='{{.Id}}' aap:foundation > .artifacts/oci-image-id.txt
-      - run: docker run --rm --network none --read-only --cap-drop ALL --security-opt no-new-privileges aap:foundation python -c 'import django; assert django.get_version() == "5.2.17"'
+      - name: OCI foundation startup and smoke
+        run: uv run --offline --locked python tools/verify_oci.py --image aap:foundation --network aap-t002-ci_default
+      - name: Stop synthetic CI PostgreSQL
+        if: always()
+        run: docker compose -f infra/compose.local.yml down -v
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:

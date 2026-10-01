@@ -105,8 +105,8 @@ def validate_database(*, migration=False, require_baseline=True):
             """
         )
         row = cursor.fetchone()
-        if row is None or not 170000 <= row[0] < 180000:
-            raise UnsafeFoundation("postgresql_17_required")
+        if row is None or not 180000 <= row[0] < 190000:
+            raise UnsafeFoundation("postgresql_18_required")
         if any(row[1:6]) or (not migration and (row[6] or row[7])):
             raise UnsafeFoundation("unsafe_database_privileges")
         if row[8] or row[11]:

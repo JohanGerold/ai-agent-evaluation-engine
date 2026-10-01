@@ -36,7 +36,7 @@ exclude = ["docs/evidence"]
 DJANGO_SETTINGS_MODULE = "app.config.settings"
 testpaths = ["tests"]
 addopts = "-ra --strict-markers"
-markers = ["postgres: requires the isolated real PostgreSQL 17 test cluster"]
+markers = ["postgres: requires the isolated real PostgreSQL 18 test cluster"]
 filterwarnings = ["error"]
 
 [tool.ruff]

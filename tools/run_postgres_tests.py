@@ -1,4 +1,4 @@
-"""Own an isolated loopback-only real PostgreSQL 17 cluster; never use customer DBs."""
+"""Own an isolated loopback-only real PostgreSQL 18 cluster; never use customer DBs."""
 
 import argparse
 import json
@@ -34,8 +34,8 @@ def main():
         print("UNVERIFIED: PostgreSQL binaries unavailable; no substitute used.")
         return 2
     version = subprocess.check_output([str(commands["postgres"]), "--version"], text=True).strip()
-    if not version.startswith("postgres (PostgreSQL) 17."):
-        print("UNVERIFIED: PostgreSQL 17 required.")
+    if not version.startswith("postgres (PostgreSQL) 18."):
+        print("UNVERIFIED: PostgreSQL 18 required.")
         return 2
     artifacts = ROOT / ".artifacts"
     artifacts.mkdir(exist_ok=True)
@@ -176,8 +176,9 @@ def external(port):
     conninfo = f"host=127.0.0.1 port={port} user=aap_bootstrap dbname=postgres"
     with psycopg.connect(conninfo, autocommit=True) as connection:
         version = connection.execute("SHOW server_version_num").fetchone()[0]
-        if not 170000 <= int(version) < 180000:
-            raise RuntimeError("postgresql_17_required")
+        patch_version = connection.execute("SHOW server_version").fetchone()[0]
+        if not 180000 <= int(version) < 190000:
+            raise RuntimeError("postgresql_18_required")
         # Names are generated internally, never supplied by a caller.
         connection.execute(
             psycopg.sql.SQL("CREATE DATABASE {} OWNER aap_migration").format(
@@ -204,7 +205,10 @@ def external(port):
     try:
 
         def run(command):
-            completed = subprocess.run(command, env=env, cwd=ROOT)
+            completed = subprocess.run(command, env=env, cwd=ROOT, capture_output=True, text=True)
+            output = completed.stdout + completed.stderr
+            print(output, end="", flush=True)
+            (run_dir / f"command-{len(commands_run) + 1}.log").write_text(output, encoding="utf-8")
             commands_run.append({"command": command, "exit_code": completed.returncode})
             if completed.returncode:
                 raise RuntimeError("foundation_subcommand_failed")
@@ -241,11 +245,18 @@ def external(port):
         # Preserve the unique synthetic database for evidence; Compose down -v is explicit cleanup.
         (run_dir / "result.json").write_text(
             json.dumps(
-                {"postgres_version_num": version, "result": result, "commands": commands_run},
+                {
+                    "postgres_version": patch_version,
+                    "postgres_version_num": version,
+                    "database": database,
+                    "result": result,
+                    "commands": commands_run,
+                },
                 indent=2,
             ),
             encoding="utf-8",
         )
+        print(f"Real PostgreSQL evidence: {run_dir / 'result.json'}")
     return result
 
 

@@ -29,7 +29,7 @@ def test_actual_runtime_role_and_supported_postgres():
         cursor.execute("SELECT current_user, current_setting('server_version_num')::int")
         user, version = cursor.fetchone()
     assert user == "aap_runtime"
-    assert 170000 <= version < 180000
+    assert 180000 <= version < 190000
 
 
 def test_baseline_creates_no_later_task_tables():
