@@ -1,0 +1,52 @@
+name: T-002 offline foundation
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  foundation:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      UV_NO_CACHE: "1"
+      AAP_ENVIRONMENT: test
+      SOURCE_DATE_EPOCH: "1790899200"
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: 3.13.15
+      - uses: astral-sh/setup-uv@94527f2e458b27549849d47d273a16bec83a01e9 # v7
+        with:
+          version: 0.12.15
+          enable-cache: false
+      - run: uv sync --locked
+      - run: uv run --offline --locked ruff check . && uv run --offline --locked ruff format --check .
+      - run: uv run --offline --locked python tools/check_boundaries.py
+      - run: uv run --offline --locked python tools/check_repository.py
+      - run: uv run --offline --locked python manage.py check && uv run --offline --locked python manage.py makemigrations --check --dry-run
+      - run: uv run --offline --locked pytest -m 'not postgres' --junitxml=.artifacts/unit.xml
+      - name: Real PostgreSQL 17 integration
+        run: |
+          docker compose -f infra/compose.local.yml up -d --wait
+          uv run --offline --locked python tools/run_postgres_tests.py --external-port 55432
+      - name: Stop synthetic CI PostgreSQL
+        if: always()
+        run: docker compose -f infra/compose.local.yml down -v
+      - name: Reproducible clean package builds
+        run: |
+          uv build --offline --no-build-isolation --out-dir .artifacts/build-one
+          uv build --offline --no-build-isolation --out-dir .artifacts/build-two
+          uv run --offline --locked python tools/build_evidence.py
+          mkdir -p dist
+          cp .artifacts/build-one/*.whl dist/
+      - run: docker build --build-arg SOURCE_REVISION="$GITHUB_SHA" --tag aap:foundation .
+      - run: docker image inspect --format='{{.Id}}' aap:foundation > .artifacts/oci-image-id.txt
+      - run: docker run --rm --network none --read-only --cap-drop ALL --security-opt no-new-privileges aap:foundation python -c 'import django; assert django.get_version() == "5.2.17"'
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: foundation-evidence
+          path: .artifacts/
+          retention-days: 7

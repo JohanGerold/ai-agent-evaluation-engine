@@ -1,0 +1,51 @@
+[build-system]
+requires = ["hatchling==1.32.4"]
+build-backend = "hatchling.build"
+
+[project]
+name = "aap"
+version = "0.0.1"
+description = "AAP offline repository foundation; not production-ready"
+requires-python = ">=3.13,<3.14"
+dependencies = [
+  "Django==5.2.17",
+  "djangorestframework==3.18.1",
+  "psycopg[binary,pool]==3.3.6",
+  "waitress==3.0.2",
+]
+
+[dependency-groups]
+dev = [
+  "build==1.6.1",
+  "hatchling==1.32.4",
+  "pytest==9.1.1",
+  "pytest-django==4.14.0",
+  "ruff==0.16.10",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
+
+[tool.hatch.build.targets.sdist]
+include = ["app", "tests", "tools", "infra", ".github", "docs", "manage.py", "README.md",
+           "pyproject.toml", "uv.lock", "requirements.txt", "Dockerfile", ".dockerignore",
+           ".gitignore", ".python-version", "AGENTS.md"]
+exclude = ["docs/evidence"]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "app.config.settings"
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"
+markers = ["postgres: requires the isolated real PostgreSQL 17 test cluster"]
+filterwarnings = ["error"]
+
+[tool.ruff]
+target-version = "py313"
+line-length = 100
+extend-exclude = [".tools", ".artifacts", ".venv", "creation", "pytest-cache-files-*"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.uv]
+required-version = "==0.12.15"
